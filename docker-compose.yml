@@ -1,0 +1,52 @@
+services:
+  php:
+    build:
+      context: ./php
+    container_name: datafakultas_php
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan --version"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./src:/var/www/html
+    environment:
+      - PROJECT_NAME=datafakultas
+    depends_on:
+      - db
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: datafakultas_nginx
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -fsSL https://datafakultas.test || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - php
+
+  db:
+    image: mariadb:10.11
+    container_name: datafakultas_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_DATABASE: datafakultas
+      MYSQL_ROOT_PASSWORD: p455w0rd
+    volumes:
+      - ./db/conf.d:/etc/mysql/conf.d
+      - ./db/data:/var/lib/mysql
